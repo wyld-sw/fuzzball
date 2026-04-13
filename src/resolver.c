@@ -137,17 +137,8 @@ static void hostprune(void) {
  * @param s the socket to set nonblocking
  */
 static void make_nonblocking(int s) {
-#if !defined(O_NONBLOCK) || defined(ULTRIX)
-# ifdef FNDELAY     /* SUN OS */
-#  define O_NONBLOCK FNDELAY
-# else
-#  ifdef O_NDELAY   /* SyseVil */
-#   define O_NONBLOCK O_NDELAY
-#  endif            /* O_NDELAY */
-# endif             /* FNDELAY */ 
-#endif
-
-    if (fcntl(s, F_SETFL, O_NONBLOCK) == -1) {
+    int flags = fcntl(s, F_GETFL, 0);
+    if (flags == -1 || fcntl(s, F_SETFL, flags | O_NONBLOCK) == -1) {
         perror("make_nonblocking: fcntl");
         abort();
     }

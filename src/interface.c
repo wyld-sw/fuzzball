@@ -2467,31 +2467,6 @@ shutdownsock(struct descriptor_data *d)
     log_status("CONCOUNT: There are now %d open connections.", ndescriptors);
 }
 
-/*
- * The idea here is to make sure O_NONBLOCK is set no matter which operating
- * system we are on.
- *
- * This seems somewhat out of place, just randomly injected here.  Might be
- * more of a config thing?
- *
- * @TODO Why do we include WIN32 in this block?  In make_nonblocking,
- *       we use a #ifdef for WIN32 ... why not just *not* use O_NONBLOCK
- *       in that block?  It will reduce some of the complexity here.
- */
-#ifdef WIN32
-# define O_NONBLOCK 1
-#else
-# if !defined(O_NONBLOCK) || defined(ULTRIX)
-#  ifdef FNDELAY /* SUN OS */
-#   define O_NONBLOCK FNDELAY
-#  else
-#   ifdef O_NDELAY /* SyseVil */
-#    define O_NONBLOCK O_NDELAY
-#   endif
-#  endif
-# endif
-#endif
-
 /**
  * Make a socket non-blocking
  *
@@ -2502,16 +2477,17 @@ static void
 make_nonblocking(int s)
 {
 #ifdef WIN32
-    unsigned long val = O_NONBLOCK;
+    unsigned long val = 1;
 
     if (ioctlsocket(s, FIONBIO, &val) == SOCKET_ERROR) {
         perror("make_nonblocking: ioctlsocket");
-        panic("O_NONBLOCK ioctlsocket failed");
+        panic("ioctlsocket failed");
     }
 #else
-    if (fcntl(s, F_SETFL, O_NONBLOCK) == -1) {
+    int flags = fcntl(s, F_GETFL, 0);
+    if (flags == -1 || fcntl(s, F_SETFL, flags | O_NONBLOCK) == -1) {
         perror("make_nonblocking: fcntl");
-        panic("O_NONBLOCK fcntl failed");
+        panic("fcntl failed");
     }
 #endif
 }
@@ -6832,26 +6808,7 @@ main(int argc, char **argv)
             setbuf(stdout, NULL);
 
             /* Disassociate from Process Group */
-#  ifdef _POSIX_SOURCE
             setsid();
-#  else
-#   ifdef SYSV
-            setpgrp(); /* The SysV way */
-#   else
-            setpgid(0, getpid()); /* The POSIX way. */
-#   endif /* SYSV */
-
-#   ifdef  TIOCNOTTY /* we can force this, POSIX / BSD */
-            {
-                int fd;
-
-                if ((fd = open("/dev/tty", O_RDWR)) >= 0) {
-                    ioctl(fd, TIOCNOTTY, NULL); /* lose controll TTY */
-                    close(fd);
-                }
-            }
-#   endif /* TIOCNOTTY */
-#  endif /* !_POSIX_SOURCE */
         }
 #endif /* WIN32 */
 

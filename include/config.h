@@ -275,37 +275,6 @@ typedef int dbref;  /**< Type wrapper for dbref - must support negatives */
 # include "crt_malloc.h"
 #endif	
 
-/******************************************************************/
-/* System configuration stuff... Figure out who and what we are.  */
-/******************************************************************/
-
-#ifdef __linux__
-/** Standard define if Linux */
-# define SYSV
-#endif
-
-#if defined(sun) || defined(__sun)
-/** I miss Sun */
-# define SUN_OS
-# ifndef _POSIX_SOURCE
-/** Make sure we've got this set */
-#  define _POSIX_SOURCE
-# endif
-#endif
-
-#if defined(ultrix) || defined(__ultrix) || defined(__ultrix__)
-/** Does anyone still use this?  Probably not. */
-# define ULTRIX
-#endif
-
-#ifdef _AIX
-/** Does anyone still use this?  Probably not. */
-# define AIX
-/** AIX is no fun */
-# define NO_MEMORY_COMMAND
-# include <sys/select.h>
-#endif
-
 /*
  * Windows compile environment.
  */
