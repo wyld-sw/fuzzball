@@ -15,6 +15,7 @@
 
 #include "config.h"
 
+#include "color.h"
 #include "commands.h"
 #include "compile.h"
 #include "db.h"
@@ -716,6 +717,16 @@ include_internal_defs(COMPSTATE * cstat)
     insert_intdef(cstat, "sorttype_nocase_descend", SORTTYPE_NOCASE_DESCEND);
     insert_intdef(cstat, "sorttype_shuffle", SORTTYPE_SHUFFLE);
     insert_def(cstat, "notify_except", "1 swap notify_exclude");
+
+    insert_def(cstat, "prefix_good",
+        "\"" ANSI_FG_GREEN ANSI_BOLD "<*> " ANSI_RESET "\" swap strcat"
+    );
+    insert_def(cstat, "prefix_warn",
+        "\"" ANSI_FG_YELLOW ANSI_BOLD "<?> " ANSI_RESET "\" swap strcat"
+    );
+    insert_def(cstat, "prefix_bad",
+        "\"" ANSI_FG_RED ANSI_BOLD "<!> " ANSI_RESET "\" swap strcat"
+    );
 
     /* Make defines for compatability to removed primitives */
     insert_def(cstat, "desc", "\"" MESGPROP_DESC "\" getpropstr");

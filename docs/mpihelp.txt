@@ -59,8 +59,8 @@ E's
   eq     eval   eval!  exec   exec!  exits  
 
 F's
-  filter     flags      fold       for        force      foreach    ftime
-  fullname   func       
+  filter     flag?      flags      fold       for        force      foreach
+  ftime      fullname   func       
 
 G's
   ge  gt  
@@ -1087,10 +1087,10 @@ items delimited by that string, otherwise it assumes a carriage return.
 Database Related Functions|Database|DBFuncs
 Database Related Functions
 
-contains   contents   controls   created    dbeq       exits      flags
-force      fullname   holds      istype     lastused   links      loc
-locked     modified   money      name       nearby     owner      ref
-testlock   type       usecount   
+contains   contents   controls   created    dbeq       exits      flag?
+flags      force      fullname   holds      istype     lastused   links
+loc        locked     modified   money      name       nearby     owner
+ref        testlock   type       usecount   
 
 ~----------------------------------------------------------------------------
 ~
@@ -1114,6 +1114,20 @@ FULLNAME
 is an exit, then the full name of the exit is given, including all the ;
 aliases.  The object must be in the immediate vicinity, or be controlled
 by the owner of the trigger object.
+~
+~
+FLAG?
+{flag?:obj,flag}
+  Returns the state of the flag on the given object. 1 = on; 0 = off.
+The ! token may be used before the name of a flag to negate the check and
+check for the absence of the flag. Returns 0 for nrecognized flags.
+
+  You can check the "interactive" flag to see if a player is currently in
+a program's READ, or if they are in the MUF editor.
+
+The "Truewizard" flag will check for a W flag with or without the QUELL set.
+The "Mucker" flag returns the most significant bit of the mucker level and
+the "Nucker" flag returns the least significant bit.
 ~
 ~
 OWNER

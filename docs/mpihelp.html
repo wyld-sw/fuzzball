@@ -97,6 +97,7 @@
 <h3>F's</h3>
 <ul>
     <li><a href="#filter">filter</a></li>
+    <li><a href="#flag?">flag?</a></li>
     <li><a href="#flags">flags</a></li>
     <li><a href="#fold">fold</a></li>
     <li><a href="#for">for</a></li>
@@ -1539,6 +1540,7 @@ items delimited by that string, otherwise it assumes a carriage return.
     <li><a href="#created">created</a></li>
     <li><a href="#dbeq">dbeq</a></li>
     <li><a href="#exits">exits</a></li>
+    <li><a href="#flag?">flag?</a></li>
     <li><a href="#flags">flags</a></li>
     <li><a href="#force">force</a></li>
     <li><a href="#fullname">fullname</a></li>
@@ -1583,6 +1585,23 @@ must be in the vicinity, or controlled by the owner of the trigger object.
 is an exit, then the full name of the exit is given, including all the ;
 aliases.  The object must be in the immediate vicinity, or be controlled
 by the owner of the trigger object.
+<!-- HTML_TOPICEND -->
+
+
+<h3 id="flag?">{flag?:obj,flag}
+<br>
+</h3>
+  Returns the state of the flag on the given object. 1 = on; 0 = off.
+The ! token may be used before the name of a flag to negate the check and
+check for the absence of the flag. Returns 0 for nrecognized flags.
+
+<p>
+  You can check the &quot;interactive&quot; flag to see if a player is currently in
+a program's READ, or if they are in the MUF editor.
+
+The &quot;Truewizard&quot; flag will check for a W flag with or without the QUELL set.
+The &quot;Mucker&quot; flag returns the most significant bit of the mucker level and
+the &quot;Nucker&quot; flag returns the least significant bit.
 <!-- HTML_TOPICEND -->
 
 

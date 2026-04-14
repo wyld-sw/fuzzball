@@ -919,6 +919,20 @@ aliases.  The object must be in the immediate vicinity, or be controlled
 by the owner of the trigger object.
 ~
 ~
+FLAG?
+{flag?:obj,flag}
+  Returns the state of the flag on the given object. 1 = on; 0 = off.
+The ! token may be used before the name of a flag to negate the check and
+check for the absence of the flag. Returns 0 for unrecognized flags.
+
+  You can check the "interactive" flag to see if a player is currently in
+a program's READ, or if they are in the MUF editor.
+
+The "Truewizard" flag will check for a W flag with or without the QUELL set.
+The "Mucker" flag returns the most significant bit of the mucker level and
+the "Nucker" flag returns the least significant bit.
+~
+~
 OWNER
 {owner:obj}
     Returns the owner of the given object.  The object must be in the
