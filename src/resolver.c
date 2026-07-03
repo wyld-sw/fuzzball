@@ -53,29 +53,15 @@ static char *strcpyn(char *buf, size_t bufsize, const char *src) {
     return buf;
 }
 
-/*
- * TODO: I don't think this declaration is needed since the definition is
- *       right after it, and this is local to the file.
- *
- *       If this is being linked to another file that defines notify, then
- *       it would make since to declare ... but to declare + define?
- *       I think we can delete it.
- *
- *       In fact, 'notify' is not used in this file at all -- maybe it is
- *       needed for a define?  Maybe we should just remove it altogether?
- */
-int notify(int player, const char *msg);
-
 /**
- * This is a local version of the 'notify' method used by fuzzball
- *
- * It just is a wrapper around printf, probably to satisfy some dependency.
+ * Local notify shim when building fb-resolver (interface.o not linked)
  *
  * @param player ignored
  * @param msg the message to display
  * @return the return value of printf
  */
-int notify(int player, const char *msg) {
+int
+notify(int player, const char *msg) {
     (void)player;
     return printf("%s\n", msg);
 }
