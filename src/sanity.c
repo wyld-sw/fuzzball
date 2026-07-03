@@ -1315,14 +1315,16 @@ find_misplaced_objects(void)
 
                 case TYPE_PLAYER: {
                     char *name = malloc(tp_player_name_limit+1);
+                    int temp;
 
-                    /* Loop to find a name we can use */
+                    for (temp = 1; ; temp++) {
+                        int len = snprintf(name, tp_player_name_limit+1,
+                                           "Unnamed%d", temp);
 
-                    /* @TODO: turn this into a for loop */
-                    int temp = 0;
-
-                    while (lookup_player(name) != NOTHING && strlen(name) < (unsigned int)tp_player_name_limit) {
-                        snprintf(name, tp_player_name_limit+1, "Unnamed%d", ++temp);
+                        if (len < 0 || len >= tp_player_name_limit ||
+                            lookup_player(name) == NOTHING) {
+                            break;
+                        }
                     }
 
                     NAME(loop) = alloc_string(name);
