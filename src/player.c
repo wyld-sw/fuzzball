@@ -245,7 +245,7 @@ create_player(const char *name, const char *password, char *error)
 
     /* link him to tp_player_start */
     PUSH(player, CONTENTS(tp_player_start));
-    add_player(player);
+    player_hash_add(player);
     DBDIRTY(player);
     DBDIRTY(tp_player_start);
 
@@ -307,7 +307,7 @@ toad_player(int descr, dbref player, dbref victim, dbref recipient)
     free((void *) PLAYER_PASSWORD(victim));
     PLAYER_SET_PASSWORD(victim, 0);
 
-    delete_player(victim);
+    player_hash_delete(victim);
     snprintf(buf, sizeof(buf), "A slimy toad named %s", NAME(victim));
     free((void *) NAME(victim));
     NAME(victim) = alloc_string(buf);
@@ -378,17 +378,14 @@ clear_players(void)
 }
 
 /**
- * Adds a player to the player lookup cache: WARNING poorly named function
+ * Adds a player to the player lookup cache.
  *
  * This does NOT actually create a player -- @see create_player
- *
- * @TODO: Rename this to player_hash_add or something similar to that
- *        to make it more clear.
  *
  * @param who the player ref to add to the hash
  */
 void
-add_player(dbref who)
+player_hash_add(dbref who)
 {
     hash_data hd;
 
@@ -402,7 +399,7 @@ add_player(dbref who)
 }
 
 /**
- * Deletes a player from the lookup cache: WARNING poorly named function
+ * Deletes a player from the lookup cache.
  *
  * This does not actually delete a player -- @see toad_player
  *
@@ -411,13 +408,10 @@ add_player(dbref who)
  *
  * The wizards will be notified if there is a failure here.  @see wall_wizards
  *
- * @TODO: Rename this to player_hash_delete or something similar to that
- *        to make it more clear.
- *
  * @param who the player to remove from the cache
  */
 void
-delete_player(dbref who)
+player_hash_delete(dbref who)
 {
     int result;
     /*
@@ -480,9 +474,9 @@ delete_player(dbref who)
                     }
 
                     change_player_name(ren, namebuf);
-                    add_player(ren);
+                    player_hash_add(ren);
                 } else {
-                    add_player(i);
+                    player_hash_add(i);
                 }
             }
         }

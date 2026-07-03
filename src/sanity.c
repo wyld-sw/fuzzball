@@ -1158,7 +1158,7 @@ create_lostandfound(dbref * player, dbref * room)
         PLAYER_SET_INSERT_MODE(*player, 0);
         PUSH(*player, CONTENTS(*room));
         DBDIRTY(*player);
-        add_player(*player);
+        player_hash_add(*player);
         flag_unparse_object(NOTHING, *player, unparse_buf, sizeof(unparse_buf));
         log_sanfix("Using %s (with password %s) to resolve unknown owner",
                    unparse_buf, rpass);
@@ -1326,7 +1326,7 @@ find_misplaced_objects(void)
                     }
 
                     NAME(loop) = alloc_string(name);
-                    add_player(loop);
+                    player_hash_add(loop);
                     free(name);
                     break;
                 }

@@ -719,9 +719,9 @@ prim_setname(PRIM_PROTOTYPE)
         /* everything ok, notify */
         log_status("NAME CHANGE (MUF): %s(#%d) to %s", NAME(ref), ref, b);
 
-        delete_player(ref);
+        player_hash_delete(ref);
         change_player_name(ref, b);
-        add_player(ref);
+        player_hash_add(ref);
     } else {
         if (!ok_object_name(b, OBJECT_TYPE(ref))) {
             abort_interp("Invalid name.");

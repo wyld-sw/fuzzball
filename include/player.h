@@ -12,16 +12,13 @@
 #include "config.h"
 
 /**
- * Adds a player to the player lookup cache: WARNING poorly named function
+ * Adds a player to the player lookup cache.
  *
  * This does NOT actually create a player -- @see create_player
  *
- * @todo: Rename this to player_hash_add or something similar to that
- *        to make it more clear.
- *
  * @param who the player ref to add to the hash
  */
-void add_player(dbref who);
+void player_hash_add(dbref who);
 
 /**
  * Check a player's password
@@ -88,7 +85,7 @@ void clear_players(void);
 dbref create_player(const char *name, const char *password, char *error);
 
 /**
- * Deletes a player from the lookup cache: WARNING poorly named function
+ * Deletes a player from the lookup cache.
  *
  * This does not actually delete a player -- @see toad_player
  *
@@ -97,12 +94,9 @@ dbref create_player(const char *name, const char *password, char *error);
  *
  * The wizards will be notified if there is a failure here.  @see wall_wizards
  *
- * @todo: Rename this to player_hash_delete or something similar to that
- *        to make it more clear.
- *
  * @param who the player to remove from the cache
  */
-void delete_player(dbref who);
+void player_hash_delete(dbref who);
 
 /**
  * Look up a player by name

@@ -1129,7 +1129,7 @@ db_read_object(FILE * f, dbref objno)
         PLAYER_SET_CURR_PROG(objno, NOTHING);
         PLAYER_SET_IGNORE_LAST(objno, NOTHING);
         OWNER(objno) = objno;
-        add_player(objno);
+        player_hash_add(objno);
         break;
 
     case TYPE_PROGRAM:

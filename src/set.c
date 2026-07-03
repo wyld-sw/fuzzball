@@ -89,9 +89,9 @@ do_name(int descr, dbref player, const char *name, char *newname)
 
         /* everything ok, notify */
         log_status("NAME CHANGE: %s(#%d) to %s", NAME(thing), thing, newname);
-        delete_player(thing);
+        player_hash_delete(thing);
         change_player_name(thing, newname);
-        add_player(thing);
+        player_hash_add(thing);
         notify(player, "Name set.");
         return;
     } else {
