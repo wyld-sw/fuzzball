@@ -390,9 +390,8 @@ mcppkg_simpleedit(McpFrame * mfr, McpMesg * msg, McpVer ver, void *context)
 
             tune_setparm(player, reference, content, TUNE_MLEV(player));
         } else if (!strcasecmp(category, "user")) {
-            /*
-             * @TODO this should probably have an 'unsupported' error ?
-             */
+            show_mcp_error(mfr, "simpleedit-set", "Unsupported reference category.");
+            return;
         } else {
             show_mcp_error(mfr, "simpleedit-set", "Unknown reference category.");
             return;
