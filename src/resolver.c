@@ -779,7 +779,7 @@ static pthread_mutex_t output_mutex = PTHREAD_MUTEX_INITIALIZER;
  *
  * @private
  */
-static int do_resolve(void) {
+static void do_resolve(void) {
     int ip1, ip2, ip3, ip4;
     in_port_t prt, myprt;
     int doagain;
