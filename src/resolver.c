@@ -577,11 +577,6 @@ static void hostadd_timestamp(long ip, const char *name) {
     hostcache_list->time = time(NULL);
 }
 
-/*
- * TODO: I'm pretty sure we don't need this declaration
- */
-void set_signals(void);
-
 /**
  * Traps certain signals that we don't care about
  *
