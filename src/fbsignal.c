@@ -274,9 +274,7 @@ void
 sig_emerg(int i)
 {
     (void)i;
-    /*
-     * @TODO This should probably log_status as well ?
-     */
+    log_status("EMERGENCY: via SIGEMERG");
     wall_and_flush
         ("\nEmergency signal received ! (power failure ?)\nThe database will be saved.\n");
     dump_database();
