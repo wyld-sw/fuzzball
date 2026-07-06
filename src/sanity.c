@@ -1121,7 +1121,7 @@ create_lostandfound(dbref * player, dbref * room)
 {
     char *player_name = malloc(tp_player_name_limit+1);
     char unparse_buf[16384];
-    int player_name_len, temp;
+    int player_name_len;
 
     *room = new_object(false);
     NAME(*room) = alloc_string("lost+found");
@@ -1135,7 +1135,7 @@ create_lostandfound(dbref * player, dbref * room)
     player_name_len = snprintf(player_name, tp_player_name_limit+1,
                                "lost+found");
 
-    for (temp = 1;
+    for (int temp = 1;
          player_name_len >= 0 &&
          player_name_len < tp_player_name_limit &&
          lookup_player(player_name) != NOTHING;
@@ -1323,9 +1323,8 @@ find_misplaced_objects(void)
 
                 case TYPE_PLAYER: {
                     char *name = malloc(tp_player_name_limit+1);
-                    int temp;
 
-                    for (temp = 1; ; temp++) {
+                    for (int temp = 1; ; temp++) {
                         int len = snprintf(name, tp_player_name_limit+1,
                                            "Unnamed%d", temp);
 

@@ -320,15 +320,21 @@ timestr_long(long dtime)
     static char buf[SMALL_BUFFER_LEN];
     const char *str[7] = { "year", "month", "week", "day", "hour", "minute", "second" };
     int div[7] = { 31556736, 2621376, 604800, 86400, 3600, 60, 1 };
+    size_t used = 0;
 
     *buf = 0;
 
     for (int i = 0; i < 7; i++) {
         if (dtime >= div[i]) {
             long temp = dtime / div[i];
-            size_t used = strlen(buf);
-            snprintf(buf + used, sizeof(buf) - used, "%s%ld %s%s",
-                     used ? ", " : "", temp, str[i], temp != 1 ? "s" : "");
+            int printed = snprintf(buf + used, sizeof(buf) - used, "%s%ld %s%s",
+                                   (used ? ", " : ""), temp, str[i], temp != 1 ? "s" : "");
+            if (printed > 0) {
+                used += printed;
+                if (used >= sizeof(buf)) {
+                    used = sizeof(buf) - 1;
+                }
+            }
             dtime %= div[i];
         }
     }

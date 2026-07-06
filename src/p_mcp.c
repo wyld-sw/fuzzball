@@ -78,9 +78,7 @@ struct mcpevent_context {
 static inline void
 muf_mcp_context_cleanup(void *context)
 {
-    struct mcp_muf_context *mmc = context;
-
-    free(mmc);
+    free(context);
 }
 
 /**
@@ -209,8 +207,7 @@ muf_mcp_callback(McpFrame * mfr, McpMesg * mesg, McpVer version, void *context)
 static void
 mcpevent_context_cleanup(void *context)
 {
-    struct mcpevent_context *mec = context;
-    free(mec);
+    free(context);
 }
 
 /**
