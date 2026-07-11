@@ -1597,43 +1597,67 @@ descrdata_by_descr(int c)
  * it doesn't do any of the book keeping needed to log the player into
  * the game.
  *
+ * Uses an error parameter to communicate the reason for failure. This
+ * should be at least SMALL_BUFFER_LEN in size.
+ *
  * @private
  * @param name the player name to look up
  * @param password the player's password
+ * @param[out] error why the create failed
  * @return the dbref of the player or NOTHING if authentication fails.
  */
 static dbref
-connect_player(const char *name, const char *password)
+connect_player(const char *name, const char *password, char *error)
 {
-    dbref player;
+    dbref player = NOTHING;
 
-    if (*name == NUMBER_TOKEN && number(name + 1) && atoi(name + 1)) {
-        player = (dbref) atoi(name + 1);
-        if (!ObjExists(player) || OBJECT_TYPE(player) != TYPE_PLAYER)
-            player = NOTHING;
+    if (*name == NUMBER_TOKEN && number(name + 1)) {
+        dbref target = (dbref) atoi(name + 1);
+        
+        if (ObjExists(target) && OBJECT_TYPE(target) == TYPE_PLAYER) {
+            player = target;
+        }
     } else {
         player = lookup_player(name);
     }
 
-    if (player == NOTHING)
+    if (player == NOTHING || !check_password(player, password)) {
+        snprintf(error, SMALL_BUFFER_LEN, "%s", tp_connect_fail_mesg);
         return NOTHING;
-
-    if (!check_password(player, password))
-        return NOTHING;
+    }
 
     return player;
 }
 
 /**
+ * Boot a descriptor due to server restriction
+ *
+ * Handles the messaging and disconnection flags when a user attempts to
+ * connect or create a character while the server is locked down. It checks
+ * the restriction state to send the appropriate message, and marks the
+ * descriptor as booted.
+ *
+ * @private
+ * @param d the descriptor structure of the user to be booted
+ */
+static void
+boot_restricted(struct descriptor_data *d)
+{
+    if (wizonly_mode) {
+        queue_ansi(d, tp_wizonly_bootmesg);
+    } else {
+        queue_ansi(d, tp_playermax_bootmesg);
+    }
+    queue_write(d, "\r\n", 2);
+    d->booted = 1;
+}
+
+/**
  * Input processing for the welcome screen / pre-connect screen
  *
- * 'check_connect' is another misnomer.  This is more like
- * 'process_welcome_input' or just 'check_welcome' or 'welcome_input' or
- * something.
- *
- * Anyway, it handles the commands understood by the welcome screen:
- * create, connect, and help.  For create and connect, only the first
- * two characters are checked.
+ * Handles the commands understood by the welcome screen: create,
+ * connect, and help.  For create and connect, only the first two
+ * characters are checked for create and connect.
  *
  * If the player successfully creates or connects, the descriptor's state
  * will be changed to connected which will take them past the login
@@ -1645,154 +1669,103 @@ connect_player(const char *name, const char *password)
  * @param msg the unprocessed message typed in from the user
  */
 static void
-check_connect(struct descriptor_data *d, const char *msg)
+process_welcome_input(struct descriptor_data *d, const char *msg)
 {
     char command[MAX_COMMAND_LEN];
     char user[MAX_COMMAND_LEN];
     char password[MAX_COMMAND_LEN];
-    dbref player;
+    dbref player = NOTHING;
     char connect_string[BUFFER_LEN];
     char error[SMALL_BUFFER_LEN] = "";
+    int do_connect = 0;
+    int do_create = 0;
+    int server_is_restricted = (wizonly_mode || (tp_playermax && con_players_curr >= tp_playermax_limit));
+    const char *host_log = tp_log_hosts ? d->hostname : "hidden host";
 
-    snprintf(connect_string, sizeof(connect_string), "%sfrom %s",
 #ifdef USE_SSL
-         d->ssl_session ? "securely " : "",
-#else
-         "",
+    if (d->ssl_session) {
+        snprintf(connect_string, sizeof(connect_string), "descriptor %d, securely (via %s) from %s",
+                 d->descriptor, SSL_get_cipher_name(d->ssl_session), host_log);
+    } else {
 #endif
-    d->hostname);
-
-    parse_connect(msg, command, user, password);
-
-    /*
-     * @TODO Create and connect have a lot of overlapping code.
-     *       Worse, create seems to be missing some checks that connect
-     *       does.
-     *
-     *       Instead, I would suggest something like this:
-     *
-     *  if ( command is help ) {
-     *      display help
-     *  } else if ( command is create ) {
-     *      do_create = 1
-     *  } else if ( command is connect ) {
-     *      do_connect = 1
-     *  } else if ( !*command ) {
-     *      return
-     *  } else {
-     *      do_welcome and return
-     *  }
-     *
-     *  put the 'connect' code here, with a conditional to create vs.
-     *  connect_player.  Make sure all conditions are met for both
-     *  cases.
-     */
-
-    if (!strncmp(command, "co", 2)) {
-        player = connect_player(user, password);
-
-        if (player == NOTHING) {
-            queue_ansi(d, tp_connect_fail_mesg);
-            queue_write(d, "\r\n", 2);
-            log_status("FAILED CONNECT: '%s', descriptor %d, %s",
-                    user, d->descriptor, connect_string);
-        } else {
-            if ((wizonly_mode ||
-                 (tp_playermax && con_players_curr >= tp_playermax_limit)) &&
-                 !TrueWizard(player)) {
-                if (wizonly_mode) {
-                    queue_ansi(d,
-                            "Sorry, but the game is in maintenance mode "
-                            "currently, and only wizards are allowed to "
-                            "connect.  Try again later.");
-                } else {
-                    queue_ansi(d, tp_playermax_bootmesg);
-                }
-
-                queue_write(d, "\r\n", 2);
-                d->booted = 1;
-            } else {
-                log_status("CONNECTED: %s(%d), descriptor %d, %s",
-                        NAME(player), player, d->descriptor, connect_string);
+        snprintf(connect_string, sizeof(connect_string), "descriptor %d, from %s",
+                 d->descriptor, host_log);
 #ifdef USE_SSL
-
-                if (d->ssl_session) {
-                    log_status("Connected via %s",
-                            SSL_get_cipher_name(d->ssl_session));
-                }
+    }
 #endif
-                d->connected = 1;
-                d->connected_at = time(NULL);
-                d->player = player;
-                remember_player_descr(player, d->descriptor);
 
-                /* cks: someone has to initialize this somewhere. */
-                PLAYER_SET_BLOCK(d->player, 0);
-                show_file(d, tp_file_motd);
-                announce_connect(d->descriptor, player);
-                interact_warn(player);
+    tokenize_as(msg, MAX_COMMAND_LEN, command, user, password);
 
-                if (sanity_violated && Wizard(player)) {
-                    notify(player, "#########################################################################");
-                    notify(player, "## WARNING!  The DB appears to be corrupt!  Please repair immediately! ##");
-                    notify(player, "#########################################################################");
-                }
-
-                con_players_curr++;
-            }
-        }
+    if (!strncmp(command, "help", 4)) {
+        show_file(d, tp_file_connection_help);
+        return;
+    } else if (!strncmp(command, "co", 2)) {
+        do_connect = 1;
     } else if (!strncmp(command, "cr", 2)) {
-        if (!tp_registration) {
-            if (wizonly_mode
-                || (tp_playermax && con_players_curr >= tp_playermax_limit)) {
-                if (wizonly_mode) {
-                    queue_ansi(d,
-                            "Sorry, but the game is in maintenance mode "
-                            "currently, and only wizards are allowed to "
-                            "connect.  Try again later.");
-                } else {
-                    queue_ansi(d, tp_playermax_bootmesg);
-                }
-
-                queue_write(d, "\r\n", 2);
-                d->booted = 1;
-            } else {
-                player = create_player(user, password, error);
-
-                if (player == NOTHING) {
-                    queue_ansi(d, error);
-                    queue_write(d, "\r\n", 2);
-                    log_status("FAILED CREATE: '%s', descriptor %d, %s",
-                            user, d->descriptor, connect_string);
-                } else {
-                    log_status("CREATED %s(%d), descriptor %d, %s",
-                            NAME(player), player, d->descriptor, connect_string);
-
-                    d->connected = 1;
-                    d->connected_at = time(NULL);
-                    d->player = player;
-                    remember_player_descr(player, d->descriptor);
-
-                    /* cks: someone has to initialize this somewhere. */
-                    PLAYER_SET_BLOCK(d->player, 0);
-                    spit_file_segment(player, tp_file_motd, "");
-                    announce_connect(d->descriptor, player);
-                    con_players_curr++;
-                }
-            }
-        } else {
+        if (tp_registration) {
             queue_ansi(d, tp_register_mesg);
             queue_write(d, "\r\n", 2);
-            log_status("FAILED CREATE: '%s', descriptor %d, %s",
-                    user, d->descriptor, connect_string);
+            log_status("REGISTRATION REQUIRED: '%s', %s", user, connect_string);
+            return;
         }
-    } else if (!strncmp(command, "help", 4)) {
-        show_file(d, tp_file_connection_help);
+        if (server_is_restricted) {
+            boot_restricted(d);
+            return;
+        }
+        do_create = 1;
     } else if (!*command) {
-        /* do nothing */
+        return;
     } else {
         welcome_user(d);
+        return;
     }
+
+    if (do_connect) {
+        player = connect_player(user, password, error);
+        if (player == NOTHING) {
+            queue_ansi(d, error);
+            queue_write(d, "\r\n", 2);
+            log_status("FAILED CONNECT: '%s', %s", user, connect_string);
+            return;
+        }
+
+        if (server_is_restricted && !TrueWizard(player)) {
+            boot_restricted(d);
+            return;
+        }
+    } else if (do_create) {
+        player = create_player(user, password, error);
+        if (player == NOTHING) {
+            queue_ansi(d, error);
+            queue_write(d, "\r\n", 2);
+            log_status("FAILED CREATE: '%s', %s", user, connect_string);
+            return;
+        }
+    }
+
+    if (do_connect) {
+        log_status("CONNECTED: %s(%d), %s", NAME(player), player, connect_string);
+    } else {
+        log_status("CREATED %s(%d), %s", NAME(player), player, connect_string);
+    }
+
+    d->connected = 1;
+    d->connected_at = time(NULL);
+    d->player = player;
+    remember_player_descr(player, d->descriptor);
+    PLAYER_SET_BLOCK(d->player, 0);
+
+    show_file(d, tp_file_motd);
+    announce_connect(d->descriptor, player);
+    interact_warn(player);
+
+    if (sanity_violated && Wizard(player)) {
+        notify_nolisten(player, "#########################################################################", 1);
+        notify_nolisten(player, "## WARNING!  The DB appears to be corrupt!  Please repair immediately! ##", 1);
+        notify_nolisten(player, "#########################################################################", 1);
+    }
+
+    con_players_curr++;
 }
 
 /**
@@ -1805,11 +1778,11 @@ check_connect(struct descriptor_data *d, const char *msg)
  * @see mcp_frame_process_input
  *
  * This processes certain built-in 'special' commands; \@Q (BREAK_COMMAND),
- * QUIT, and WHO.  Then it hands off to process_command or check_connect
+ * QUIT, and WHO.  Then it hands off to process_command or process_welcome_input
  * based on if you're connected or not.
  *
  * @see process_command
- * @see check_connect
+ * @see process_welcome_input
  *
  * @private
  * @param d the descriptor data structure
@@ -1875,7 +1848,7 @@ do_command(struct descriptor_data *d, char *command)
                 dump_users(d, command + sizeof(WHO_COMMAND) - 1);
             }
         } else {
-            check_connect(d, command);
+            process_welcome_input(d, command);
         }
     } else if (d->connected) {
         /**

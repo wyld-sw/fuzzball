@@ -597,6 +597,25 @@ void tolower_string(char **s);
 void toupper_string(char **s);
 
 /**
+ * Tokenizes a string into an array of fixed-size pre-allocated buffers.
+ *
+ * @param msg             The input string.
+ * @param buffer_array    Array of pointers to your destination buffers.
+ * @param array_size      How many buffers you passed.
+ * @param buffer_capacity The maximum capacity of EACH individual buffer.
+ */
+void tokenize_to_array(const char *msg, char **buffer_array, int array_size, size_t buffer_capacity);
+
+/**
+ * Tokenizes a string directly into a sequence of inline destination buffers.
+ *
+ * @param msg             The input string.
+ * @param cap             The maximum capacity of EACH individual buffer.
+ * @param ...             The sequential list of destination buffers.
+ */
+#define tokenize_as(msg, cap, ...) \
+    tokenize_to_array(msg, ((char*[]){__VA_ARGS__}), ARRAYSIZE(((char*[]){__VA_ARGS__})), cap)
+/**
  * Figure out if a string should be considered a true value
  *
  * This is used by MPI for instance to determine if a string

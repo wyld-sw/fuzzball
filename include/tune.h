@@ -169,6 +169,7 @@ extern int         tp_listen_mlev;              /**< Tune variable */
 extern bool        tp_lock_envcheck;            /**< Tune variable */
 extern bool        tp_log_commands;             /**< Tune variable */
 extern bool        tp_log_failed_commands;      /**< Tune variable */
+extern bool        tp_log_hosts;                /**< Tune variable */
 extern bool        tp_log_interactive;          /**< Tune variable */
 extern bool        tp_log_programs;             /**< Tune variable */
 extern int         tp_lookup_cost;              /**< Tune variable */
@@ -225,6 +226,7 @@ extern bool        tp_secure_teleport;          /**< Tune variable */
 extern bool        tp_secure_thing_movement;    /**< Tune variable */
 extern bool        tp_secure_who;               /**< Tune variable */
 extern bool        tp_server_cipher_preference; /**< Tune variable */
+extern bool        tp_show_hidden_object_types; /**< Tune variable */
 extern const char *tp_smtp_server;              /**> Described below */
 extern const char *tp_smtp_port;                /**> Described below */
 extern int         tp_smtp_ssl_type;            /**> Described below */
@@ -254,7 +256,7 @@ extern dbref       tp_welcome_mpi_what;         /**< Tune variable */
 extern dbref       tp_welcome_mpi_who;          /**< Tune variable */
 extern bool        tp_who_hides_dark;           /**< Tune variable */
 extern bool        tp_wiz_vehicles;             /**< Tune variable */
-extern bool        tp_show_hidden_object_types; /**< Tune variable */
+extern const char *tp_wizonly_bootmesg;       /**< Tune variable */
 
 /**
  * @var tune_list

@@ -2022,3 +2022,33 @@ toupper_string(char **s)
    for (char *p = *s; *p; p++)
         *p = toupper(*p);
 }
+
+/**
+ * Tokenizes a string into an array of fixed-size pre-allocated buffers.
+ *
+ * @param msg             The input string.
+ * @param buffer_array    Array of pointers to your destination buffers.
+ * @param array_size      How many buffers you passed.
+ * @param buffer_capacity The maximum capacity of EACH individual buffer.
+ */
+void
+tokenize_to_array(const char *msg, char **buffer_array, int array_size, size_t buffer_capacity)
+{
+    if (!msg || !buffer_array || array_size <= 0 || buffer_capacity == 0) return;
+    
+    const char *current = msg;
+    const char *delimiters = " \t";
+
+    for (int i = 0; i < array_size; i++) {
+        buffer_array[i][0] = '\0';
+        current += strspn(current, delimiters);
+        if (*current == '\0') break;
+
+        size_t token_len = strcspn(current, delimiters);
+        size_t copy_len = (token_len >= buffer_capacity) ? (buffer_capacity - 1) : token_len;
+
+        memcpy(buffer_array[i], current, copy_len);
+        buffer_array[i][copy_len] = '\0';
+        current += token_len;
+    }
+}

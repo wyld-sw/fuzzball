@@ -116,6 +116,7 @@ int         tp_listen_mlev;                         /**> Described below */
 bool        tp_lock_envcheck;                       /**> Described below */
 bool        tp_log_commands;                        /**> Described below */
 bool        tp_log_failed_commands;                 /**> Described below */
+bool        tp_log_hosts;                           /**> Described below */
 bool        tp_log_interactive;                     /**> Described below */
 bool        tp_log_programs;                        /**> Described below */
 int         tp_lookup_cost;                         /**> Described below */
@@ -172,6 +173,7 @@ bool        tp_secure_teleport;                     /**> Described below */
 bool        tp_secure_thing_movement;               /**> Described below */
 bool        tp_secure_who;                          /**> Described below */
 bool        tp_server_cipher_preference;            /**> Described below */
+bool        tp_show_hidden_object_types;            /**> Described below */
 int         tp_smtp_auth_type;                      /**> Described below */
 const char *tp_smtp_from_name;                      /**> Described below */
 const char *tp_smtp_from_email;                     /**> Described below */
@@ -201,7 +203,7 @@ dbref       tp_welcome_mpi_what;                    /**> Described below */
 dbref       tp_welcome_mpi_who;                     /**> Described below */
 bool        tp_who_hides_dark;                      /**> Described below */
 bool        tp_wiz_vehicles;                        /**> Described below */
-bool        tp_show_hidden_object_types;            /**> Described below */
+const char *tp_wizonly_bootmesg;                    /**> Described below */
 
 /**
  * @var tune_list
@@ -1236,6 +1238,18 @@ struct tune_entry tune_list[] = {
         true
     },
     {
+        "log_hosts",
+        "Log hosts during connection events",
+        "Logging",
+        "",
+        TP_TYPE_BOOLEAN,
+        .defaultval.b=true,
+        .currentval.b=&tp_log_hosts,
+        MLEV_WIZARD,
+        MLEV_WIZARD,
+        true
+    },
+    {
         "log_interactive",
         "Log text sent to MUF",
         "Logging",
@@ -1708,7 +1722,7 @@ struct tune_entry tune_list[] = {
         "",
         TP_TYPE_STRING,
         .defaultval.s=
-            "Sorry, but there are too many players online.  Please try " \
+            "Sorry, but there are too many players online. Please try " \
             "reconnecting in a few minutes.",
         .currentval.s=&tp_playermax_bootmesg,
         0,
@@ -1923,6 +1937,18 @@ struct tune_entry tune_list[] = {
         .currentval.b=&tp_server_cipher_preference,
         MLEV_GOD,
         MLEV_GOD,
+        true
+    },
+    {
+        "show_hidden_object_types",
+        "Display object type flags in a non-backwards compatible manner",
+        "Database",
+        "",
+        TP_TYPE_BOOLEAN,
+        .defaultval.b=false,
+        .currentval.b=&tp_show_hidden_object_types,
+        0,
+        MLEV_WIZARD,
         true
     },
     {
@@ -2295,13 +2321,15 @@ struct tune_entry tune_list[] = {
         true
     },
     {
-        "show_hidden_object_types",
-        "Display object type flags in a non-backwards compatible manner",
-        "Database",
+        "wizonly_bootmesg",
+        "Maintenance mode connection error message",
+        "Connecting",
         "",
-        TP_TYPE_BOOLEAN,
-        .defaultval.b=false,
-        .currentval.b=&tp_show_hidden_object_types,
+        TP_TYPE_STRING,
+        .defaultval.s=
+            "Sorry, but the game is in maintenance mode currently, and " \
+            "only wizards are allowed to connect. Please try again later.",
+        .currentval.s=&tp_wizonly_bootmesg,
         0,
         MLEV_WIZARD,
         true
