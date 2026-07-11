@@ -1746,7 +1746,7 @@ process_welcome_input(struct descriptor_data *d, const char *msg)
     if (do_connect) {
         log_status("CONNECTED: %s(%d), %s", NAME(player), player, connect_string);
     } else {
-        log_status("CREATED %s(%d), %s", NAME(player), player, connect_string);
+        log_status("CREATED: %s(%d), %s", NAME(player), player, connect_string);
     }
 
     d->connected = 1;
