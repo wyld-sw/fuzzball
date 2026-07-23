@@ -60,3 +60,6 @@ venv
 
 # Password file
 pw-file.txt
+
+# Python cache
+__pycache__

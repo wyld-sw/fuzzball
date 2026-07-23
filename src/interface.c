@@ -3103,6 +3103,22 @@ process_input(struct descriptor_data *d)
     got = socket_read(d, buf, maxget);
 
     /*
+     * A zero-length read means the peer closed the connection (EOF).  On
+     * the console descriptor (-console mode) stdin is the primary
+     * interface, so a closed stdin -- a drained input pipe or Ctrl-D --
+     * means the operator's session is over.  Reconnecting the console
+     * would just re-hit EOF and spin, reprinting the welcome screen
+     * forever, so instead request a clean shutdown via the same path as
+     * @shutdown and SIGTERM.  Non-console sockets fall through to the
+     * normal disconnect handling below.
+     */
+    if (got == 0 && d->is_console) {
+        shutdown_flag = 1;
+        restart_flag = 0;
+        return 0;
+    }
+
+    /*
      * The way the error works varies based on Windows or not.  Basically,
      * if the error is EWOULDBLOCK (or the windows equivalent) then that
      * isn't really an error -- just means no data.  Otherwise, it is
@@ -3401,11 +3417,22 @@ process_input(struct descriptor_data *d)
                 } else
 #endif
                 if (*q == TELOPT_NAWS) {
-                    sendbuf[0] = TELNET_IAC;
-                    sendbuf[1] = TELNET_DO;
-                    sendbuf[2] = (unsigned char)*q;
-                    sendbuf[3] = '\0';
-                    queue_immediate_raw(d, (const char *)sendbuf);
+                    /*
+                     * NAWS (window size).  Acknowledge the remote's WILL
+                     * with a DO only the first time; once the option is
+                     * settled we stay silent.  Re-sending DO here makes
+                     * some clients re-send WILL, looping forever and
+                     * flooding an idle connection.  The window size still
+                     * arrives via the SB NAWS subnegotiation regardless.
+                     */
+                    if (!d->naws_remote_will) {
+                        d->naws_remote_will = 1;
+                        sendbuf[0] = TELNET_IAC;
+                        sendbuf[1] = TELNET_DO;
+                        sendbuf[2] = (unsigned char)*q;
+                        sendbuf[3] = '\0';
+                        queue_immediate_raw(d, (const char *)sendbuf);
+                    }
 
                     /* Otherwise, we don't negotiate: send back DONT
                      * option
@@ -3435,20 +3462,38 @@ process_input(struct descriptor_data *d)
              * We want to allow NAWS
              */
             if ((unsigned char)*q == TELOPT_NAWS) {
-                sendbuf[1] = TELNET_WILL;
+                /*
+                 * Agree to NAWS with WILL, but only the first time.
+                 * Re-answering an already-settled DO makes some clients
+                 * re-send DO in turn, looping forever; stay silent once
+                 * the option is settled.
+                 */
+                if (!d->naws_local_will) {
+                    d->naws_local_will = 1;
+                    sendbuf[1] = TELNET_WILL;
+                    sendbuf[2] = (unsigned char)*q;
+                    sendbuf[3] = '\0';
+                    queue_immediate_raw(d, (const char *)sendbuf);
+                }
             } else {
+                /* We don't negotiate anything else: send back WONT */
                 sendbuf[1] = TELNET_WONT;
+                sendbuf[2] = (unsigned char)*q;
+                sendbuf[3] = '\0';
+                queue_immediate_raw(d, (const char *)sendbuf);
             }
-
-            sendbuf[2] = (unsigned char)*q;
-            sendbuf[3] = '\0';
-
-            queue_immediate_raw(d, (const char *)sendbuf);
 
             d->telnet_state = TELNET_STATE_NORMAL;
             d->telnet_enabled = 1;
         } else if (d->telnet_state == TELNET_STATE_WONT) {
-            /* Ignore WONT option. */
+            /* A WONT NAWS means the remote will no longer send window
+             * sizes; clear the state so a later WILL can re-enable it.
+             * Otherwise ignore WONT.
+             */
+            if ((unsigned char)*q == TELOPT_NAWS) {
+                d->naws_remote_will = 0;
+            }
+
             d->telnet_state = TELNET_STATE_NORMAL;
             d->telnet_enabled = 1;
         } else if (d->telnet_state == TELNET_STATE_DONT) {
@@ -3460,6 +3505,13 @@ process_input(struct descriptor_data *d)
             sendbuf[3] = '\0';
 
             queue_immediate_raw(d, (const char *)sendbuf);
+
+            /* A DONT NAWS means we should no longer send window sizes;
+             * clear the state so a later DO can re-enable it.
+             */
+            if ((unsigned char)*q == TELOPT_NAWS) {
+                d->naws_local_will = 0;
+            }
 
             d->telnet_state = TELNET_STATE_NORMAL;
             d->telnet_enabled = 1;
@@ -4091,7 +4143,14 @@ shovechars()
                 int was_console = d->is_console;
                 shutdownsock(d);
 #ifndef WIN32
-                if (was_console) {
+                /*
+                 * Reconnect the console after an in-world disconnect (e.g.
+                 * QUIT) so the operator gets a fresh login prompt -- but
+                 * not when we are shutting down (notably console stdin EOF,
+                 * handled in process_input), where reconnecting would just
+                 * reprint the welcome screen and spin.
+                 */
+                if (was_console && shutdown_flag == 0) {
                     connect_console();
                 }
 #endif

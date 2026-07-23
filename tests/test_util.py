@@ -331,6 +331,9 @@ Args:
 """
 def create_command_tests_for(base_class, yaml_file):
     with open(yaml_file, 'r') as fh:
-        lst = yaml.load(fh)
+        # safe_load: the cases are plain data, and bare yaml.load() dropped its
+        # implicit-Loader default in PyYAML 5.1+ (removed in 6.x), which broke
+        # this call.  safe_load has the same behavior across those versions.
+        lst = yaml.safe_load(fh)
     for item in lst:
         _create_command_test_from(base_class, yaml_file, item)
