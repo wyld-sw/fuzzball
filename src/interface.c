@@ -915,54 +915,6 @@ save_command(struct descriptor_data *d, const char *command)
 }
 
 /**
- * Process a connect screen message (msg) into command components.
- *
- * This takes a command string 'msg' that will be something typed
- * in to the welcome screen and breaks it out nto 'command', 'user',
- * and 'pass' strings.
- *
- * 'command', 'user', and 'pass' should all be allocated buffers
- * that will have their component of the 'msg' string copied into
- * them (or they will be set to "").  They should probably all be
- * BUFFER_LEN in size even if that is kind of wasteful -- just for
- * safety sake.  To be more efficient, you could dynamically allocate
- * them all to 'strlen(msg)+1' in size.
- *
- * @private
- * @param msg the message to parse
- * @param command the destination buffer for the command portion
- * @param user the destination buffer for the user portion
- * @param pass the destination buffer for the password portion.
- */
-static void
-parse_connect(const char *msg, char *command, char *user, char *pass)
-{
-    char *p;
-
-    skip_whitespace(&msg);
-    p = command;
-
-    while (*msg && isinput(*msg) && !isspace(*msg))
-        *p++ = tolower(*msg++);
-
-    *p = '\0';
-    skip_whitespace(&msg);
-    p = user;
-
-    while (*msg && isinput(*msg) && !isspace(*msg))
-        *p++ = *msg++;
-
-    *p = '\0';
-    skip_whitespace(&msg);
-    p = pass;
-
-    while (*msg && isinput(*msg) && !isspace(*msg))
-        *p++ = *msg++;
-
-    *p = '\0';
-}
-
-/**
  * Dump a text file to the given descriptor
  *
  * This is extremely similar to spit_file_segment, except spit_file_degment
@@ -1677,8 +1629,14 @@ process_welcome_input(struct descriptor_data *d, const char *msg)
     dbref player = NOTHING;
     char connect_string[BUFFER_LEN];
     char error[SMALL_BUFFER_LEN] = "";
-    int do_connect = 0;
-    int do_create = 0;
+
+    typedef enum {
+         ACTION_NONE = 0,
+         ACTION_CONNECT,
+         ACTION_CREATE
+    } welcome_action_t;
+    welcome_action_t action = ACTION_NONE;
+
     int server_is_restricted = (wizonly_mode || (tp_playermax && con_players_curr >= tp_playermax_limit));
     const char *host_log = tp_log_hosts ? d->hostname : "hidden host";
 
@@ -1696,58 +1654,60 @@ process_welcome_input(struct descriptor_data *d, const char *msg)
 
     tokenize_as(msg, MAX_COMMAND_LEN, command, user, password);
 
-    if (!strncmp(command, "help", 4)) {
-        show_file(d, tp_file_connection_help);
-        return;
-    } else if (!strncmp(command, "co", 2)) {
-        do_connect = 1;
-    } else if (!strncmp(command, "cr", 2)) {
-        if (tp_registration) {
-            queue_ansi(d, tp_register_mesg);
-            queue_write(d, "\r\n", 2);
-            log_status("REGISTRATION REQUIRED: '%s', %s", user, connect_string);
-            return;
-        }
-        if (server_is_restricted) {
-            boot_restricted(d);
-            return;
-        }
-        do_create = 1;
-    } else if (!*command) {
-        return;
-    } else {
-        welcome_user(d);
+    if (!*command) {
         return;
     }
 
-    if (do_connect) {
+    unsigned short cmd_key = command[0] 
+        ? ((unsigned char)tolower((unsigned char)command[0]) << 8 | 
+           (unsigned char)tolower((unsigned char)command[1])) 
+        : 0;
+
+    switch (cmd_key) {
+        case ('h' << 8 | 'e'):
+            show_file(d, tp_file_connection_help);
+            return;
+
+        case ('c' << 8 | 'o'):
+            action = ACTION_CONNECT;
+            break;
+
+        case ('c' << 8 | 'r'):
+            if (tp_registration) {
+                queue_ansi(d, tp_register_mesg);
+                queue_write(d, "\r\n", 2);
+                log_status("REGISTRATION REQUIRED: '%s', %s", user, connect_string);
+                return;
+            }
+            if (server_is_restricted) {
+                boot_restricted(d);
+                return;
+            }
+            action = ACTION_CREATE;
+            break;
+
+        default:
+            welcome_user(d);
+            return;
+    }
+
+    if (action == ACTION_CONNECT) {
         player = connect_player(user, password, error);
-        if (player == NOTHING) {
-            queue_ansi(d, error);
-            queue_write(d, "\r\n", 2);
-            log_status("FAILED CONNECT: '%s', %s", user, connect_string);
-            return;
-        }
-
-        if (server_is_restricted && !TrueWizard(player)) {
-            boot_restricted(d);
-            return;
-        }
-    } else if (do_create) {
+    } else if (action == ACTION_CREATE) {
         player = create_player(user, password, error);
-        if (player == NOTHING) {
-            queue_ansi(d, error);
-            queue_write(d, "\r\n", 2);
-            log_status("FAILED CREATE: '%s', %s", user, connect_string);
-            return;
-        }
     }
 
-    if (do_connect) {
-        log_status("CONNECTED: %s(%d), %s", NAME(player), player, connect_string);
-    } else {
-        log_status("CREATED: %s(%d), %s", NAME(player), player, connect_string);
-    }
+    if (player == NOTHING) {
+        queue_ansi(d, error);
+        queue_write(d, "\r\n", 2);
+        log_status("FAILED %s: '%s', %s", (action == ACTION_CONNECT) ? "CONNECT" : "CREATE", user, connect_string);
+        return;                                                         
+    }                                                                   
+
+    if (action == ACTION_CONNECT && server_is_restricted && !TrueWizard(player)) {
+        boot_restricted(d);
+        return;
+    }                                                                   
 
     d->connected = 1;
     d->connected_at = time(NULL);

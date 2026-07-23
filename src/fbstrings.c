@@ -2042,7 +2042,7 @@ tokenize_to_array(const char *msg, char **buffer_array, int array_size, size_t b
     for (int i = 0; i < array_size; i++) {
         buffer_array[i][0] = '\0';
         current += strspn(current, delimiters);
-        if (*current == '\0') break;
+        if (*current == '\0') continue;
 
         size_t token_len = strcspn(current, delimiters);
         size_t copy_len = (token_len >= buffer_capacity) ? (buffer_capacity - 1) : token_len;
