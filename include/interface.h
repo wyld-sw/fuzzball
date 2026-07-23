@@ -180,6 +180,20 @@ struct descriptor_data {
     unsigned char  height_buf[2];   /**< Bytes for height protocol   */
 
     /*
+     * NAWS (window size) negotiation state, tracked per direction.
+     *
+     * We proactively request NAWS at connect time (IAC DO NAWS).  These
+     * flags record that the DO/WILL handshake has already been settled so
+     * we do not re-answer an option that is already agreed.  Re-answering
+     * a settled negotiation makes some clients re-answer in turn, which
+     * produces an unbounded IAC DO/WILL (or WILL/DO) loop that floods an
+     * otherwise idle connection with packets.  The window size itself
+     * still arrives via the SB NAWS subnegotiation, independent of these.
+     */
+    int naws_remote_will;           /**< Remote agreed to send window size */
+    int naws_local_will;            /**< We agreed to send window size     */
+
+    /*
      * As required by the Telnet protocol, any occurrence of 255 in the
      * subnegotiation must be doubled to distinguish it from the IAC
      * character (which has a value of 255).
