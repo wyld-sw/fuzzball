@@ -407,6 +407,9 @@ prim_getpropstr(PRIM_PROTOTYPE)
         int len = oper1->data.string ? oper1->data.string->length : 0;
         PropPtr ptr;
 
+        if (!prop_read_perms(ProgUID, oper2->data.objref, oper1->data.string->data, mlev))
+            abort_interp("Permission denied.");
+
         /* Trim trailing slashes */
         while (len-- > 0 && type[len] == PROPDIR_DELIMITER) {
             type[len] = '\0';
